@@ -1,0 +1,10 @@
+package handler
+
+import "github.com/gin-gonic/gin"
+
+func (s *defaultHandler) SetRouter(t *gin.Engine) *defaultHandler {
+	t.POST("/publish/:tofic", s.SendPublish)
+
+	s.router = t
+	return s
+}
