@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"rabbit/constant"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 type bodyLogWriter struct {
@@ -61,9 +61,10 @@ func SetUpLogger() gin.HandlerFunc {
 		//Process request
 		c.Next()
 
-		var requestBody []byte
-		if c.Request.Body != nil {
-			requestBody, _ = ioutil.ReadAll(c.Request.Body)
+		var requestBody interface{}
+		c.ShouldBindBodyWith(&requestBody, binding.JSON)
+		if requestBody == nil {
+			requestBody = ""
 		}
 
 		//End time
@@ -77,15 +78,13 @@ func SetUpLogger() gin.HandlerFunc {
 		//Log format
 		accessLogMap := make(map[string]interface{})
 
-		accessLogMap["request_time"] = startTime.String()
+		accessLogMap["request_time"] = startTime.Format("2006-01-02 15:04:05")
 		accessLogMap["request_method"] = c.Request.Method
 		accessLogMap["request_uri"] = c.Request.RequestURI
 		accessLogMap["request_ua"] = c.Request.UserAgent()
-		accessLogMap["request_referer"] = c.Request.Referer()
-		accessLogMap["request_post_data"] = c.Request.PostForm.Encode()
-		accessLogMap["request_post_body"] = string(requestBody)
+		accessLogMap["request_body"] = requestBody
 		accessLogMap["request_client_host"] = c.Request.Host
-		accessLogMap["response_time"] = endTime.String()
+		accessLogMap["response_time"] = endTime.Format("2006-01-02 15:04:05")
 		accessLogMap["response_code"] = c.Writer.Status()
 		accessLogMap["response_data"] = bodyLogWriter.body.String()
 		accessLogMap["cost_time"] = fmt.Sprintf("%vms", endNano-startNano)
