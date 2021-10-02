@@ -6,3 +6,4 @@
 
 # New Feature
 - Logger
+- Multi consume module
