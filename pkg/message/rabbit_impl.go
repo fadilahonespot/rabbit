@@ -3,7 +3,6 @@ package message
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/streadway/amqp"
@@ -29,9 +28,9 @@ func (s *defaultSetting) Validate() RabbitService {
 	return s
 }
 
-func (s *defaultSetting) Publish(topick string, message []byte) (err error) {
+func (s *defaultSetting) Publish(topic string, message []byte) (err error) {
 	q, err := s.ch.QueueDeclare(
-		topick, // name
+		topic, // name
 		false,  // durable
 		false,  // delete when unused
 		false,  // exclusive
@@ -59,9 +58,9 @@ func (s *defaultSetting) Publish(topick string, message []byte) (err error) {
 	return nil
 }
 
-func (s *defaultSetting) Consume(topick string, f func([]byte) error) (err error) {
+func (s *defaultSetting) Consume(topic string, consume func(*amqp.Delivery) error) {
 	q, err := s.ch.QueueDeclare(
-		topick, // name
+		topic, // name
 		false,  // durable
 		false,  // delete when unused
 		false,  // exclusive
@@ -70,7 +69,7 @@ func (s *defaultSetting) Consume(topick string, f func([]byte) error) (err error
 	)
 	if err != nil {
 		err = fmt.Errorf("%s : %s", err, "Failed to declare a queue")
-		return
+		panic(err)
 	}
 
 	msgs, err := s.ch.Consume(
@@ -84,22 +83,19 @@ func (s *defaultSetting) Consume(topick string, f func([]byte) error) (err error
 	)
 	if err != nil {
 		err = fmt.Errorf("%s : %s", err, "Failed to register a consumer")
-		return
+		panic(err)
 	}
-
-	forever := make(chan bool)
 
 	go func() {
 		for d := range msgs {
-			f(d.Body)
+			err = consume(&d)
+			if err != nil {
+				fmt.Println("error receiper: ", err)
+			}
 			dotCount := bytes.Count(d.Body, []byte("."))
 			t := time.Duration(dotCount)
 			time.Sleep(t * time.Second)
 			d.Ack(false)
 		}
 	}()
-
-	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
-	<-forever
-	return
 }

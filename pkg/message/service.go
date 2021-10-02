@@ -1,6 +1,8 @@
 package message
 
+import "github.com/streadway/amqp"
+
 type RabbitService interface {
-	Publish(topick string, message []byte) (err error)
-	Consume(topict string, f func([]byte) error) (err error)
+	Publish(topic string, message []byte) (err error)
+	Consume(topic string, consume func(*amqp.Delivery) error)
 }
