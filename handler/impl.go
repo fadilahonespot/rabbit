@@ -8,6 +8,7 @@ import (
 	"rabbit/pkg/message"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 type defaultHandler struct {
@@ -34,15 +35,17 @@ func (s *defaultHandler) Validate() *defaultHandler {
 func (s *defaultHandler) SendPublish(c *gin.Context) {
 	tofic := c.Param("tofic")
 	person := constant.Person{}
-	err := c.Bind(&person)
+	err := c.ShouldBindBodyWith(&person, binding.JSON)
 	if err != nil {
-		log.Panicf("error bind data: %s", err)
+		c.JSON(http.StatusBadRequest, "invalid input")
+		return
 	}
 
 	by, _ := json.Marshal(person)
 	err = s.rabbitService.Publish(tofic, by)
 	if err != nil {
 		log.Println(err)
+		c.JSON(http.StatusBadRequest, "failed publish data")
 		return
 	}
 
